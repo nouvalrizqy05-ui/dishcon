@@ -1,19 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { FiCrosshair, FiEye, FiEyeOff, FiShield } from "react-icons/fi";
+import { useState, type ReactNode, Suspense } from "react";
+import { FiCrosshair, FiEye, FiEyeOff, FiLock, FiMail, FiMapPin, FiPhone, FiShield, FiUser, FiHome, FiShoppingBag } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
 import { getCurrentPosition } from "@/lib/maps";
-import { cn } from "@/lib/utils";
 import type { JenisUsaha, PublicUserRole } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const JENIS_USAHA_OPTIONS: { value: JenisUsaha; label: string }[] = [
   { value: "warmindo", label: "Warmindo" },
@@ -23,181 +20,159 @@ const JENIS_USAHA_OPTIONS: { value: JenisUsaha; label: string }[] = [
   { value: "lainnya", label: "Lainnya" }
 ];
 
-export function LoginCard() {
+const fieldClass =
+  "h-12 rounded-2xl border-gray-200 bg-gray-50 pl-11 text-base text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-brand-500/20 sm:text-sm";
+
+function IconField({
+  label,
+  icon: Icon,
+  hint,
+  children,
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <label className="label mb-1.5 block text-sm font-bold text-gray-900">{label}</label>
+      <div className="group relative">
+        <Icon className="absolute left-3.5 top-3.5 h-5 w-5 text-gray-400 transition-colors group-focus-within:text-brand-600" />
+        {children}
+      </div>
+      {hint}
+    </div>
+  );
+}
+
+export function LoginForm({ role }: { role: PublicUserRole }) {
+  return (
+    <Suspense fallback={<p className="text-sm font-semibold text-gray-400">Memuat form masuk...</p>}>
+      <LoginFormInner role={role} />
+    </Suspense>
+  );
+}
+
+function LoginFormInner({ role }: { role: PublicUserRole }) {
   const router = useRouter();
   const params = useSearchParams();
-  const { login, signInWithGoogle, isSupabaseConnected, resendVerificationEmail } = useAuth();
+  const { login, resendVerificationEmail } = useAuth();
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [loginRole, setLoginRole] = useState<PublicUserRole>("mahasiswa");
+  const registerHref = role === "mitra" ? "/mitra/register" : "/register";
+  const registered = params.get("registered") === "1";
+  const verified = params.get("verified") === "1";
+  const registeredEmail = params.get("email") || "";
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setError("");
     setLoading(true);
-    const result = await login({ email: String(form.get("email") || ""), password: String(form.get("password") || ""), role: loginRole });
+    const result = await login({ email: String(form.get("email") || ""), password: String(form.get("password") || ""), role });
     setLoading(false);
     if (!result.ok) { setError(result.error); return; }
     const next = params.get("next");
     router.push(next || result.redirectTo);
   }
 
-  async function resendSignupVerification() {
-    const email = params.get("email") || "";
-    setError("");
-    setNotice("");
-    setLoading(true);
-    const result = await resendVerificationEmail(email);
-    setLoading(false);
-    if (!result.ok) { setError(result.error); return; }
-    setNotice(result.message || "Email verifikasi sudah dikirim ulang.");
-  }
-
-  async function continueWithGoogleLogin() {
-    setError("");
-    setLoading(true);
-    const result = await signInWithGoogle(loginRole);
-    if (!result.ok) {
-      setError(result.error);
-      setLoading(false);
-    }
+  async function resendVerification() {
+    setVerificationMessage("");
+    const result = await resendVerificationEmail(email || registeredEmail);
+    setVerificationMessage(result.ok ? result.message || "Email verifikasi dikirim ulang." : result.error);
   }
 
   return (
-    <Card className="w-full max-w-[560px] rounded-[2rem] p-6 shadow-soft md:p-10">
-      <h2 className="text-3xl font-extrabold text-brand-900 md:text-4xl">Masuk ke Akun Anda</h2>
-      <p className="mt-3 text-stone-500">Pilih akses mitra UMKM atau mahasiswa saat masuk. Satu email bisa dipakai untuk dua role publik, sedangkan admin tetap lewat login khusus.</p>
-      {params.get("registered") === "1" && <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-sm font-bold text-brand-800"><p>Registrasi berhasil. Verifikasi email terlebih dahulu, lalu masuk.</p>{params.get("email") && <button type="button" onClick={resendSignupVerification} disabled={loading || !isSupabaseConnected} className="mt-2 text-brand-900 underline underline-offset-4">Kirim ulang email verifikasi</button>}</div>}
-      {params.get("verified") === "1" && <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-sm font-bold text-brand-800">Email berhasil diverifikasi. Silakan login dengan email dan kata sandi Anda.</div>}
-      {notice && <p className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm font-bold text-blue-700">{notice}</p>}
-      <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-xs font-bold text-brand-800"><FiShield className="mr-2 inline" /> Mode database: {isSupabaseConnected ? "Supabase aktif" : "Demo lokal terintegrasi"}</div>
-      <form onSubmit={submit} className="mt-8 space-y-5">
-        <div><Label>Login Sebagai</Label><div className="grid grid-cols-2 gap-3"><button type="button" onClick={() => setLoginRole("mahasiswa")} className={cn("h-12 rounded-2xl border text-sm font-bold transition", loginRole === "mahasiswa" ? "border-brand-700 bg-brand-50 text-brand-800" : "border-stone-200 text-stone-500 hover:bg-stone-50")}>Mahasiswa</button><button type="button" onClick={() => setLoginRole("mitra")} className={cn("h-12 rounded-2xl border text-sm font-bold transition", loginRole === "mitra" ? "border-brand-700 bg-brand-50 text-brand-800" : "border-stone-200 text-stone-500 hover:bg-stone-50")}>Mitra UMKM</button></div><p className="mt-2 text-xs text-stone-400">Pilihan ini menentukan dashboard yang dibuka setelah login.</p></div>
-        <div><Label>Email</Label><Input name="email" type="email" autoComplete="email" required placeholder="Masukkan email Anda" /></div>
-        <div><Label>Kata Sandi</Label><div className="relative"><Input name="password" type={show ? "text" : "password"} autoComplete="current-password" required placeholder="Masukkan kata sandi Anda" className="pr-12" /><button type="button" onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400" aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}>{show ? <FiEyeOff /> : <FiEye />}</button></div></div>
-        <div className="flex justify-end text-sm"><Link href="/forgot-password" className="font-bold text-brand-700">Lupa kata sandi?</Link></div>
-        {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-        <Button disabled={loading} className="h-[52px] w-full">{loading ? "Memproses..." : "Masuk"}</Button>
-        <div className="flex items-center gap-4 text-sm text-stone-400"><span className="h-px flex-1 bg-stone-200" />atau<span className="h-px flex-1 bg-stone-200" /></div>
-        <Button type="button" variant="secondary" className="w-full" onClick={continueWithGoogleLogin} disabled={loading}><Image src="/assets/logo-google.jpeg" alt="Google" width={20} height={20} className="rounded-full object-contain" /> Continue with Google</Button>
-        <p className="-mt-2 text-center text-xs text-stone-400">Nama akun akan mengikuti Google. Role mengikuti pilihan di atas dan bisa ditautkan sebagai role kedua.</p>
-        <p className="text-center text-sm text-stone-500">Belum punya akun? <Link href="/register" className="font-extrabold text-brand-700">Daftar sekarang</Link></p>
-        <p className="text-center text-xs text-stone-400">Administrator? <Link href="/admin/login" className="font-extrabold text-brand-700">Buka Login Admin</Link></p>
-      </form>
-    </Card>
+    <form onSubmit={submit} className="space-y-5">
+      <IconField label="Email" icon={FiUser}>
+        <Input
+          name="email"
+          type="text"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="email@example.com"
+          className={fieldClass}
+        />
+      </IconField>
+
+      <div>
+        <IconField label="Kata Sandi" icon={FiLock}>
+          <Input
+            name="password"
+            type={show ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            placeholder="••••••"
+            className={cn(fieldClass, "pr-10")}
+          />
+          <button type="button" onClick={() => setShow(!show)} className="absolute right-1 top-1 grid h-10 w-10 place-items-center rounded-xl text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}>
+            {show ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+          </button>
+        </IconField>
+        <div className="mt-2 text-right">
+          <Link href="/forgot-password" className="text-sm font-bold text-brand-600 hover:underline">Lupa Kata Sandi?</Link>
+        </div>
+      </div>
+
+      {registered ? (
+        <div className="rounded-2xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">
+          <p>Akun berhasil dibuat{registeredEmail ? ` untuk ${registeredEmail}` : ""}. Silakan masuk setelah email diverifikasi.</p>
+          <button type="button" onClick={resendVerification} className="mt-2 text-xs font-black text-emerald-700 underline">Kirim ulang email verifikasi</button>
+        </div>
+      ) : null}
+      {verified ? (
+        <div className="rounded-2xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">
+          <p>Email berhasil diverifikasi. Silakan masuk dengan akun Anda.</p>
+          <button type="button" onClick={resendVerification} className="mt-2 text-xs font-black text-blue-700 underline">Kirim ulang email verifikasi</button>
+        </div>
+      ) : null}
+      {verificationMessage ? <p role="status" className="rounded-2xl bg-stone-50 p-3 text-sm font-semibold text-stone-700">{verificationMessage}</p> : null}
+
+      {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+
+      <Button disabled={loading} className="mt-2 h-12 w-full rounded-2xl bg-brand-500 py-4 text-base font-bold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-600">
+        {loading ? "Memproses..." : "Masuk"}
+      </Button>
+
+      <div className="flex items-center gap-3 text-xs text-gray-400">
+        <span className="h-px flex-1 bg-gray-100" />
+        Belum punya akun?
+        <span className="h-px flex-1 bg-gray-100" />
+      </div>
+
+      <Link
+        href={registerHref}
+        className="flex h-12 w-full items-center justify-center rounded-2xl border-2 border-brand-500 text-base font-bold text-brand-600 transition hover:bg-brand-50"
+      >
+        {role === "mitra" ? "Daftar Jadi Mitra" : "Daftar Mahasiswa"}
+      </Link>
+
+      <p className="pb-6 text-center text-xs text-gray-500 lg:pb-0">
+        Dengan masuk, kamu menyetujui{" "}
+        <Link href="/legal/syarat-ketentuan" className="font-semibold text-brand-600 hover:underline">Syarat & Ketentuan</Link>
+        {" "}serta{" "}
+        <Link href="/legal/privasi" className="font-semibold text-brand-600 hover:underline">Kebijakan Privasi</Link>
+      </p>
+    </form>
   );
 }
 
-
-export function ForgotPasswordCard() {
-  const { requestPasswordReset, isSupabaseConnected } = useAuth();
-  const [message, setMessage] = useState("");
+export function RegisterForm({ role }: { role: PublicUserRole }) {
+  const router = useRouter();
+  const { register } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    setMessage("");
-    setError("");
-    setLoading(true);
-    const result = await requestPasswordReset(String(form.get("email") || ""));
-    setLoading(false);
-    if (!result.ok) { setError(result.error); return; }
-    setMessage(result.message || "Link reset kata sandi sudah dikirim.");
-  }
-
-  return (
-    <Card className="w-full max-w-[520px] rounded-[2rem] p-6 shadow-soft md:p-10">
-      <h2 className="text-3xl font-extrabold text-brand-900 md:text-4xl">Lupa Kata Sandi</h2>
-      <p className="mt-3 leading-7 text-stone-500">Masukkan email akun Anda. Sistem akan mengirim link reset kata sandi melalui Supabase Auth.</p>
-      <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-xs font-bold text-brand-800"><FiShield className="mr-2 inline" /> Mode database: {isSupabaseConnected ? "Supabase aktif" : "Demo lokal"}</div>
-      <form onSubmit={submit} className="mt-8 space-y-5">
-        <div><Label>Email</Label><Input name="email" type="email" autoComplete="email" required placeholder="contoh@email.com" /></div>
-        {message && <p className="rounded-2xl bg-brand-50 p-3 text-sm font-semibold text-brand-700">{message}</p>}
-        {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-        <Button disabled={loading} className="h-[52px] w-full">{loading ? "Mengirim link..." : "Kirim Link Reset"}</Button>
-        <p className="text-center text-sm text-stone-500"><Link href="/login" className="font-extrabold text-brand-700">Kembali ke login</Link></p>
-      </form>
-    </Card>
-  );
-}
-
-export function ResetPasswordCard() {
-  const router = useRouter();
-  const { updatePassword, isSupabaseConnected } = useAuth();
   const [show, setShow] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    async function prepareRecoverySession() {
-      if (!supabase) {
-        if (active) {
-          setError("Reset kata sandi membutuhkan koneksi Supabase.");
-          setReady(true);
-        }
-        return;
-      }
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError && active) setError(exchangeError.message);
-      }
-      if (active) setReady(true);
-    }
-    prepareRecoverySession();
-    return () => { active = false; };
-  }, []);
-
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    const password = String(form.get("password") || "");
-    const confirm = String(form.get("confirm") || "");
-    setMessage("");
-    setError("");
-    if (password !== confirm) { setError("Konfirmasi kata sandi belum sama."); return; }
-    setLoading(true);
-    const result = await updatePassword(password);
-    setLoading(false);
-    if (!result.ok) { setError(result.error); return; }
-    setMessage(result.message || "Kata sandi berhasil diperbarui.");
-    setTimeout(() => router.replace("/login"), 1200);
-  }
-
-  return (
-    <Card className="w-full max-w-[520px] rounded-[2rem] p-6 shadow-soft md:p-10">
-      <h2 className="text-3xl font-extrabold text-brand-900 md:text-4xl">Reset Kata Sandi</h2>
-      <p className="mt-3 leading-7 text-stone-500">Buat kata sandi baru untuk akun DishCon Anda.</p>
-      <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-xs font-bold text-brand-800"><FiShield className="mr-2 inline" /> Mode database: {isSupabaseConnected ? "Supabase aktif" : "Demo lokal"}</div>
-      <form onSubmit={submit} className="mt-8 space-y-5">
-        <div><Label>Kata Sandi Baru</Label><div className="relative"><Input name="password" type={show ? "text" : "password"} minLength={8} required placeholder="Minimal 8 karakter" className="pr-12" /><button type="button" onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400" aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}>{show ? <FiEyeOff /> : <FiEye />}</button></div></div>
-        <div><Label>Konfirmasi Kata Sandi Baru</Label><Input name="confirm" type={show ? "text" : "password"} minLength={8} required placeholder="Ulangi kata sandi baru" /></div>
-        {message && <p className="rounded-2xl bg-brand-50 p-3 text-sm font-semibold text-brand-700">{message}</p>}
-        {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-        <Button disabled={loading || !ready} className="h-[52px] w-full">{loading ? "Menyimpan..." : ready ? "Simpan Kata Sandi Baru" : "Memeriksa link..."}</Button>
-        <p className="text-center text-sm text-stone-500"><Link href="/login" className="font-extrabold text-brand-700">Kembali ke login</Link></p>
-      </form>
-    </Card>
-  );
-}
-
-export function RegisterCard() {
-  const router = useRouter();
-  const { register, signInWithGoogle, isSupabaseConnected } = useAuth();
-  const [role, setRole] = useState<PublicUserRole>("mahasiswa");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locationLabel, setLocationLabel] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const loginHref = role === "mitra" ? "/mitra/login" : "/login";
 
   async function captureLocation() {
     setLocating(true);
@@ -218,6 +193,7 @@ export function RegisterCard() {
     const form = new FormData(e.currentTarget);
     setError("");
     if (form.get("password") !== form.get("confirm")) { setError("Konfirmasi kata sandi belum sama."); return; }
+    if (!form.get("agree")) { setError("Centang persetujuan Syarat & Ketentuan serta Kebijakan Privasi."); return; }
     setLoading(true);
     const result = await register({
       name: String(form.get("name") || ""),
@@ -237,67 +213,115 @@ export function RegisterCard() {
     router.push(result.redirectTo);
   }
 
-  async function continueWithGoogle() {
-    setError("");
-    setLoading(true);
-    const result = await signInWithGoogle(role);
-    if (!result.ok) {
-      setError(result.error);
-      setLoading(false);
-    }
-  }
-
   return (
-    <Card className="w-full max-w-[560px] rounded-[2rem] p-6 shadow-soft md:p-10">
-      <h2 className="text-3xl font-extrabold text-brand-900 md:text-4xl">Buat Akun DishCon</h2>
-      <p className="mt-3 text-stone-500">Pendaftaran publik hanya tersedia untuk mitra UMKM dan mahasiswa. Akun admin dibuat khusus oleh pengelola sistem.</p>
-      <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-xs font-bold text-brand-800"><FiShield className="mr-2 inline" /> Mode database: {isSupabaseConnected ? "Supabase aktif" : "Demo lokal terintegrasi"}</div>
-      <form onSubmit={submit} className="mt-8 space-y-5">
-        <div><Label>{role === "mitra" ? "Nama Pemilik Usaha" : "Nama Lengkap"}</Label><Input name="name" required placeholder="Masukkan nama lengkap" /></div>
-        <div className="grid gap-4 md:grid-cols-2"><div><Label>Email</Label><Input name="email" type="email" required placeholder="contoh@email.com" /></div><div><Label>Nomor Telepon</Label><Input name="phone" type="tel" inputMode="tel" required placeholder="08xxxxxxxxxx" /></div><div><Label>Kata Sandi</Label><Input name="password" type="password" minLength={8} required placeholder="Minimal 8 karakter" /></div><div><Label>Konfirmasi Kata Sandi</Label><Input name="confirm" type="password" minLength={8} required placeholder="Ulangi kata sandi" /></div></div>
-        <div><Label>Daftar Sebagai</Label><div className="grid grid-cols-2 gap-3"><button type="button" onClick={() => setRole("mahasiswa")} className={cn("h-12 rounded-2xl border text-sm font-bold transition", role === "mahasiswa" ? "border-brand-700 bg-brand-50 text-brand-800" : "border-stone-200 text-stone-500 hover:bg-stone-50")}>Mahasiswa</button><button type="button" onClick={() => setRole("mitra")} className={cn("h-12 rounded-2xl border text-sm font-bold transition", role === "mitra" ? "border-brand-700 bg-brand-50 text-brand-800" : "border-stone-200 text-stone-500 hover:bg-stone-50")}>Mitra UMKM</button></div></div>
-        <div className="flex items-center gap-4 text-sm text-stone-400"><span className="h-px flex-1 bg-stone-200" />atau<span className="h-px flex-1 bg-stone-200" /></div>
-        <Button type="button" variant="secondary" className="h-[52px] w-full" onClick={continueWithGoogle} disabled={loading}><Image src="/assets/logo-google.jpeg" alt="Google" width={20} height={20} className="rounded-full object-contain" /> Continue with Google</Button>
-        <p className="-mt-2 text-center text-xs text-stone-400">Role yang dipilih akan diterapkan setelah Google selesai mengautentikasi akun.</p>
-
+    <form onSubmit={submit} className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <IconField label={role === "mitra" ? "Nama Pemilik Usaha" : "Nama Lengkap"} icon={FiUser}>
+          <Input name="name" required placeholder="Sesuai nama lengkap" className={fieldClass} />
+        </IconField>
         {role === "mitra" ? (
-          <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-4">
-            <p className="mb-4 font-extrabold text-brand-900">Data Usaha</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div><Label>Nama Usaha</Label><Input name="nama_usaha" required placeholder="Contoh: Warmindo Bu Sri" /></div>
-              <div><Label>Jenis Usaha</Label><select name="jenis_usaha" className="h-12 w-full rounded-2xl border border-stone-200 bg-white px-4 font-semibold outline-none focus:ring-2 focus:ring-brand-500">{JENIS_USAHA_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
-              <div className="md:col-span-2"><Label>Alamat Usaha</Label><Input name="address" required placeholder="Alamat warung/usaha untuk titik jarak hiperlokal" /></div>
-            </div>
-          </div>
+          <IconField label="Nama Usaha" icon={FiShoppingBag}>
+            <Input name="nama_usaha" required placeholder="Contoh: Warmindo Bu Sri" className={fieldClass} />
+          </IconField>
         ) : (
-          <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 p-4">
-            <p className="mb-4 font-extrabold text-brand-900">Data Kos</p>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div><Label>Nama Kos</Label><Input name="nama_kos" placeholder="Contoh: Kos Melati 2" /></div>
-              <div><Label>Alamat Kos</Label><Input name="address" required placeholder="Alamat kos untuk hitung jarak ke kantong surplus" /></div>
-            </div>
-          </div>
+          <IconField label="Nama Kos" icon={FiHome}>
+            <Input name="nama_kos" placeholder="Contoh: Kos Melati 2" className={fieldClass} />
+          </IconField>
         )}
+      </div>
 
-        <div className="rounded-3xl border border-brand-100 bg-brand-50 p-4">
-          <p className="font-extrabold text-brand-900">Titik Lokasi GPS (opsional, sangat disarankan)</p>
-          <p className="mt-1 text-xs text-brand-800">Dipakai untuk menghitung jarak hiperlokal secara akurat, bukan sekadar nama alamat.</p>
-          <Button type="button" variant="secondary" className="mt-3" onClick={captureLocation} disabled={locating}><FiCrosshair /> {locating ? "Mengambil lokasi..." : "Ambil Lokasi Saat Ini"}</Button>
-          {locationLabel && <p className="mt-2 text-xs font-bold text-brand-700">Lokasi tersimpan: {locationLabel}</p>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <IconField label="Email" icon={FiMail}>
+          <Input name="email" type="email" required placeholder="email@example.com" className={fieldClass} />
+        </IconField>
+        <IconField
+          label="Nomor WhatsApp"
+          icon={FiPhone}
+          hint={<p className="mt-1 text-[10px] text-gray-400">Dipakai untuk konfirmasi reservasi.</p>}
+        >
+          <Input name="phone" type="tel" inputMode="tel" required placeholder="08123456789" className={fieldClass} />
+        </IconField>
+      </div>
+
+      <hr className="border-gray-100" />
+      <h3 className="text-sm font-bold text-gray-900">{role === "mitra" ? "Data Usaha" : "Alamat Kos"}</h3>
+
+      {role === "mitra" ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-bold text-gray-900">Jenis Usaha</label>
+            <select name="jenis_usaha" className="h-12 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 text-base outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 sm:text-sm">
+              {JENIS_USAHA_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </div>
+          <IconField label="Alamat Usaha" icon={FiMapPin}>
+            <Input name="address" required placeholder="Alamat warung untuk titik jarak" className={fieldClass} />
+          </IconField>
         </div>
+      ) : (
+        <IconField label="Alamat Kos" icon={FiMapPin}>
+          <Input name="address" required placeholder="Nama jalan, RT/RW, kelurahan" className={fieldClass} />
+        </IconField>
+      )}
 
-        {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-        <Button disabled={loading} className="h-[52px] w-full">{loading ? "Mendaftarkan..." : "Daftar Sekarang"}</Button>
-        <p className="text-center text-sm text-stone-500">Sudah punya akun? <Link href="/login" className="font-extrabold text-brand-700">Masuk</Link></p>
-      </form>
-    </Card>
+      <button
+        type="button"
+        onClick={captureLocation}
+        disabled={locating}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-semibold text-gray-700 transition hover:border-brand-500 hover:bg-white"
+      >
+        <FiCrosshair className="h-5 w-5 text-gray-400" />
+        {locating ? "Mengambil lokasi..." : "Ambil Lokasi GPS Saat Ini (opsional)"}
+      </button>
+      {locationLabel ? <p className="text-xs font-bold text-brand-600">Lokasi: {locationLabel}</p> : null}
+
+      <hr className="border-gray-100" />
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <IconField label="Kata Sandi" icon={FiLock}>
+          <Input name="password" type={show ? "text" : "password"} minLength={8} required placeholder="Minimal 8 karakter" className={cn(fieldClass, "pr-10")} />
+          <button type="button" onClick={() => setShow(!show)} className="absolute right-1 top-1 grid h-10 w-10 place-items-center rounded-xl text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}>
+            {show ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+          </button>
+        </IconField>
+        <IconField label="Konfirmasi Kata Sandi" icon={FiLock}>
+          <Input name="confirm" type={show ? "text" : "password"} minLength={8} required placeholder="Ulangi kata sandi" className={fieldClass} />
+        </IconField>
+      </div>
+
+      {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          name="agree"
+          type="checkbox"
+          required
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+        />
+        <span className="text-sm text-gray-600">
+          Saya menyetujui{" "}
+          <Link href="/legal/syarat-ketentuan" className="font-semibold text-brand-600 hover:underline">Syarat & Ketentuan</Link>
+          {" "}serta{" "}
+          <Link href="/legal/privasi" className="font-semibold text-brand-600 hover:underline">Kebijakan Privasi</Link>
+          .
+        </span>
+      </label>
+
+      <Button disabled={loading} className="mt-2 h-12 w-full rounded-2xl bg-brand-500 py-4 text-base font-bold text-white shadow-lg shadow-brand-500/20 hover:bg-brand-600">
+        {loading ? "Mendaftarkan..." : "Daftar Sekarang"}
+      </Button>
+
+      <p className="pb-6 text-center text-sm text-gray-500 lg:pb-0">
+        Sudah punya akun?{" "}
+        <Link href={loginHref} className="font-bold text-brand-600 hover:underline">Masuk di sini</Link>
+      </p>
+    </form>
   );
 }
 
-
 export function AdminLoginCard() {
   const router = useRouter();
-  const { loginAdmin, isSupabaseConnected } = useAuth();
+  const { loginAdmin } = useAuth();
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -314,19 +338,108 @@ export function AdminLoginCard() {
   }
 
   return (
-    <Card className="w-full max-w-[520px] rounded-[2rem] p-6 shadow-soft md:p-10">
+    <div className="mx-auto mt-20 w-full max-w-[520px] rounded-3xl border border-stone-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
       <div className="inline-flex items-center gap-2 rounded-full bg-brand-900 px-4 py-2 text-xs font-black uppercase tracking-widest text-white"><FiShield /> Admin Area</div>
-      <h2 className="mt-5 text-3xl font-extrabold text-brand-900 md:text-4xl">Login Administrator</h2>
-      <p className="mt-3 leading-7 text-stone-500">Hanya email yang memiliki role <b>admin</b> pada tabel profiles Supabase yang dapat masuk melalui halaman ini.</p>
-      <div className="mt-4 rounded-2xl bg-brand-50 p-3 text-xs font-bold text-brand-800">Mode database: {isSupabaseConnected ? "Supabase aktif" : "Demo lokal"}</div>
-      {!isSupabaseConnected && <div className="mt-3 rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-3 text-xs text-stone-600"><b className="text-ink">Akun admin demo:</b> admin@dishcon.id / Admin123!</div>}
+      <h2 className="mt-5 text-2xl font-extrabold text-brand-900 sm:text-3xl md:text-4xl">Login Administrator</h2>
       <form onSubmit={submit} className="mt-8 space-y-5">
-        <div><Label>Email Admin</Label><Input name="email" type="email" autoComplete="email" required placeholder="admin@domain.com" /></div>
-        <div><Label>Kata Sandi</Label><div className="relative"><Input name="password" type={show ? "text" : "password"} autoComplete="current-password" required placeholder="Masukkan kata sandi admin" className="pr-12" /><button type="button" onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400" aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}>{show ? <FiEyeOff /> : <FiEye />}</button></div></div>
+        <div><Label>Email Admin</Label><Input name="email" type="email" required placeholder="admin@domain.com" /></div>
+        <div><Label>Kata Sandi</Label><div className="relative"><Input name="password" type={show ? "text" : "password"} required className="pr-12" /><button type="button" onClick={() => setShow(!show)} aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400">{show ? <FiEyeOff /> : <FiEye />}</button></div></div>
         {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-        <Button disabled={loading} className="h-[52px] w-full">{loading ? "Memverifikasi role..." : "Masuk sebagai Admin"}</Button>
+        <Button disabled={loading} className="h-12 w-full">{loading ? "Memverifikasi..." : "Masuk sebagai Admin"}</Button>
         <p className="text-center text-sm text-stone-500"><Link href="/login" className="font-extrabold text-brand-700">Kembali ke login pengguna</Link></p>
       </form>
-    </Card>
+    </div>
+  );
+}
+
+export function ForgotPasswordCard() {
+  const { requestPasswordReset } = useAuth();
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    setError("");
+    setMessage("");
+    setLoading(true);
+    const result = await requestPasswordReset(String(form.get("email") || ""));
+    setLoading(false);
+    if (!result.ok) { setError(result.error); return; }
+    setMessage(result.message || "Link reset sudah dikirim. Periksa email Anda.");
+  }
+
+  return (
+    <form onSubmit={submit} className="w-full max-w-md space-y-5 rounded-3xl border border-stone-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+      <h2 className="text-2xl font-black text-brand-900">Lupa Kata Sandi</h2>
+      <p className="text-sm text-stone-500">Masukkan email akun DishCon. Kami akan mengirim tautan reset jika akun terhubung ke email itu.</p>
+      <IconField label="Email" icon={FiMail}>
+        <Input name="email" type="email" required placeholder="email@example.com" className={fieldClass} />
+      </IconField>
+      {error && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+      {message && <p className="rounded-2xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{message}</p>}
+      <Button disabled={loading} className="h-12 w-full rounded-2xl bg-brand-500 font-bold text-white hover:bg-brand-600">
+        {loading ? "Mengirim..." : "Kirim tautan reset"}
+      </Button>
+      <p className="text-center text-sm text-gray-500">
+        <Link href="/login" className="font-bold text-brand-600 hover:underline">Kembali ke masuk mahasiswa</Link>
+        {" · "}
+        <Link href="/mitra/login" className="font-bold text-brand-600 hover:underline">Masuk mitra</Link>
+      </p>
+    </form>
+  );
+}
+export function ResetPasswordCard() {
+  const router = useRouter();
+  const { updatePassword } = useAuth();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    if (password.length < 8) {
+      setError("Kata sandi baru minimal 8 karakter.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Konfirmasi kata sandi belum sama.");
+      return;
+    }
+    setSaving(true);
+    const result = await updatePassword(password);
+    setSaving(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setMessage(result.message || "Kata sandi berhasil diperbarui.");
+    setTimeout(() => router.push("/login"), 1200);
+  }
+
+  return (
+    <form onSubmit={submit} className="w-full max-w-md space-y-5 rounded-3xl border border-stone-100 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6">
+      <div>
+        <h2 className="text-2xl font-black text-brand-900">Buat Kata Sandi Baru</h2>
+        <p className="mt-2 text-sm leading-6 text-stone-500">Masukkan kata sandi baru yang kuat dan mudah Anda ingat.</p>
+      </div>
+      <IconField label="Kata Sandi Baru" icon={FiLock}>
+        <Input name="password" type={show ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="new-password" className={cn(fieldClass, "pr-10")} />
+        <button type="button" onClick={() => setShow((value) => !value)} aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"} className="absolute right-1 top-1 grid h-10 w-10 place-items-center rounded-xl text-stone-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">{show ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}</button>
+      </IconField>
+      <IconField label="Konfirmasi Kata Sandi" icon={FiLock}>
+        <Input name="confirm" type={show ? "text" : "password"} value={confirm} onChange={(event) => setConfirm(event.target.value)} required minLength={8} autoComplete="new-password" className={fieldClass} />
+      </IconField>
+      {error && <p role="alert" className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+      {message && <p role="status" className="rounded-2xl bg-brand-50 p-3 text-sm font-semibold text-brand-700">{message}</p>}
+      <Button disabled={saving} className="h-12 w-full rounded-2xl bg-brand-600 text-base font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700">{saving ? "Menyimpan..." : "Simpan Kata Sandi Baru"}</Button>
+      <p className="text-center text-sm text-stone-500"><Link href="/login" className="font-bold text-brand-600 hover:underline">Kembali ke halaman masuk</Link></p>
+    </form>
   );
 }

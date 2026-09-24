@@ -11,16 +11,20 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#eef8ef",
-          100: "#d9f0dc",
-          200: "#b7e2bf",
-          300: "#89cc9a",
-          400: "#5ab475",
-          500: "#219c59",
-          600: "#147f45",
-          700: "#145c37",
-          800: "#123b25",
-          900: "#0f281a"
+          50: "#f0fdf4",
+          100: "#dcfce7",
+          200: "#bbf7d0",
+          300: "#86efac",
+          400: "#4ade80",
+          500: "#22c55e",
+          600: "#16a34a",
+          700: "#15803d",
+          800: "#166534",
+          900: "#14532d"
+        },
+        accent: {
+          500: "#f59e0b",
+          600: "#d97706"
         },
         cream: "#f7f6f0",
         ink: "#101828"
@@ -34,11 +38,26 @@ const config: Config = {
         '4xl': '2.25rem'
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"]
+        sans: ["var(--font-fredoka)", "Fredoka", "ui-sans-serif", "system-ui", "sans-serif"],
+        soft: ["var(--font-nunito)", "Nunito", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
+      keyframes: {
+        "infinite-scroll": {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" }
+        },
+        "infinite-scroll-reverse": {
+          from: { transform: "translateX(-50%)" },
+          to: { transform: "translateX(0)" }
+        }
+      },
+      animation: {
+        "infinite-scroll": "infinite-scroll 36s linear infinite",
+        "infinite-scroll-reverse": "infinite-scroll-reverse 42s linear infinite"
       },
       backgroundImage: {
         softgrid: "radial-gradient(circle at 20px 20px, rgba(20, 127, 69, 0.08) 1px, transparent 0)",
-        hero: "linear-gradient(135deg, rgba(238,248,239,.9) 0%, rgba(255,255,255,.95) 52%, rgba(246,223,141,.2) 100%)"
+        hero: "linear-gradient(135deg, rgba(240,253,244,.9) 0%, rgba(255,255,255,.95) 52%, rgba(245,158,11,.15) 100%)"
       }
     }
   },

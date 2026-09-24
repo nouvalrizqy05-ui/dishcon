@@ -9,6 +9,7 @@ import {
   FiEye,
   FiInbox,
   FiLock,
+  FiLogOut,
   FiMail,
   FiSave,
   FiSend,
@@ -25,6 +26,7 @@ import { readableRole, useDishconData } from "@/lib/dishcon-store";
 import { getCurrentPosition, formatDistanceMeters } from "@/lib/maps";
 import type { Complaint, JenisUsaha, Preferences, Profile, UserRole } from "@/lib/types";
 import { EmptyState, Field, StatusBadge } from "@/components/pages/shared";
+import { MobileUtilityLinks } from "@/components/mobile/mobile-utility-links";
 
 const JENIS_USAHA_OPTIONS: { value: JenisUsaha; label: string }[] = [
   { value: "warmindo", label: "Warmindo" },
@@ -39,7 +41,7 @@ function base(role: UserRole) {
 }
 
 export function ProfilePage({ role }: { role: UserRole }) {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
   const [message, setMessage] = useState("");
   const [locating, setLocating] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(user?.lat && user?.lng ? { lat: user.lat, lng: user.lng } : null);
@@ -84,8 +86,9 @@ export function ProfilePage({ role }: { role: UserRole }) {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-      <form onSubmit={submit} className="soft-panel p-6">
+    <>
+      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <form onSubmit={submit} className="soft-panel p-4 sm:p-6">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-700 text-lg font-black text-white">{user.name.slice(0, 2).toUpperCase()}</span>
           <div><h2 className="text-2xl font-black text-brand-900">Profil Saya</h2><p className="text-stone-500">Profil ini dipakai untuk verifikasi {readableRole(role).toLowerCase()}.</p></div>
@@ -109,20 +112,25 @@ export function ProfilePage({ role }: { role: UserRole }) {
           {coords && <p className="mt-2 text-xs font-bold text-brand-700">Lokasi tersimpan: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</p>}
         </div>
         {message && <p className="mt-5 rounded-2xl bg-brand-50 p-4 text-sm font-bold text-brand-700">{message}</p>}
-        <Button className="mt-6"><FiSave /> Simpan Profil</Button>
+        <Button className="mt-6 w-full sm:w-auto"><FiSave /> Simpan Profil</Button>
       </form>
       <aside className="space-y-5">
         {role === "mitra" && (
-          <div className="soft-panel p-6">
+          <div className="soft-panel p-4 sm:p-6">
             <FiUser className="text-2xl text-brand-700" />
             <h3 className="mt-3 font-black text-brand-900">Status Verifikasi</h3>
             <div className="mt-3"><StatusBadge status={user.verification_status || "belum_verifikasi"} /></div>
             <p className="mt-2 text-sm leading-6 text-stone-500">{user.verification_status === "terverifikasi" ? "Semua listing baru tayang otomatis tanpa approval berlapis." : "Listing pertama Anda akan diperiksa admin satu kali."}</p>
           </div>
         )}
-        <div className="soft-panel p-6"><FiLock className="text-2xl text-brand-700" /><h3 className="mt-3 font-black text-brand-900">Akses berdasarkan role</h3><p className="mt-2 text-sm leading-6 text-stone-500">Setiap halaman dilindungi agar mitra, mahasiswa, dan admin hanya membuka menu sesuai perannya.</p></div>
+        <div className="soft-panel p-4 sm:p-6"><FiLock className="text-2xl text-brand-700" /><h3 className="mt-3 font-black text-brand-900">Akses berdasarkan role</h3><p className="mt-2 text-sm leading-6 text-stone-500">Setiap halaman dilindungi agar mitra, mahasiswa, dan admin hanya membuka menu sesuai perannya.</p></div>
       </aside>
-    </div>
+      </div>
+      <div className="mt-4 md:hidden">
+        <MobileUtilityLinks />
+        <button type="button" onClick={logout} className="focus-ring mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 text-sm font-black text-red-700"><FiLogOut aria-hidden="true" /> Logout</button>
+      </div>
+    </>
   );
 }
 
@@ -169,15 +177,16 @@ function PreferencesForm() {
   }
 
   return (
-    <section id="preferensi" className="soft-panel p-6">
+    <section id="preferensi" className="soft-panel p-4 sm:p-6">
       <div className="mb-6 flex items-center gap-3"><FiSliders className="text-2xl text-brand-700" /><div><h2 className="text-2xl font-black text-brand-900">Preferensi Mahasiswa</h2><p className="text-stone-500">Mengatur radius hiperlokal, kategori, dan filter halal di katalog.</p></div></div>
       <div className="space-y-6">
         <label className="block rounded-3xl border border-stone-200 p-4 font-bold"><input checked={prefs.halal} onChange={(e) => setPrefs({ ...prefs, halal: e.target.checked })} type="checkbox" className="mr-3 accent-brand-700" /> Prioritaskan halal</label>
+        <div className="grid gap-3 sm:grid-cols-2"><label className="flex min-h-12 items-center gap-3 rounded-2xl border border-stone-200 p-3 text-sm font-bold"><input checked={prefs.notificationEmail} onChange={(e) => setPrefs({ ...prefs, notificationEmail: e.target.checked })} type="checkbox" className="h-4 w-4 accent-brand-700" /> Notifikasi email</label><label className="flex min-h-12 items-center gap-3 rounded-2xl border border-stone-200 p-3 text-sm font-bold"><input checked={prefs.notificationPush} onChange={(e) => setPrefs({ ...prefs, notificationPush: e.target.checked })} type="checkbox" className="h-4 w-4 accent-brand-700" /> Notifikasi push</label></div>
         <Field label={`Radius Maksimal: ${formatDistanceMeters(prefs.maxRadiusMeter)}`}><input type="range" min="200" max="5000" step="100" value={prefs.maxRadiusMeter} onChange={(e) => setPrefs({ ...prefs, maxRadiusMeter: Number(e.target.value) })} className="w-full accent-brand-700" /></Field>
         <div><p className="mb-3 text-sm font-black text-ink">Kategori Favorit</p><div className="flex flex-wrap gap-3">{CATEGORY_OPTIONS.map((cat) => <button key={cat} type="button" onClick={() => toggleCategory(cat)} className={`rounded-full border px-4 py-2 text-sm font-black ${prefs.preferredCategories.includes(cat) ? "border-brand-600 bg-brand-50 text-brand-700" : "border-stone-200 text-stone-500"}`}>{cat}</button>)}</div></div>
       </div>
       {message && <p className="mt-5 rounded-2xl bg-brand-50 p-4 text-sm font-bold text-brand-700">{message}</p>}
-      <Button onClick={submit} className="mt-6"><FiSave /> Simpan Preferensi</Button>
+      <Button onClick={submit} className="mt-6 w-full sm:w-auto"><FiSave /> Simpan Preferensi</Button>
     </section>
   );
 }
@@ -223,7 +232,7 @@ function SecuritySettingsPanel({ role }: { role: UserRole }) {
   }
 
   return (
-    <section id="keamanan" className="soft-panel p-6">
+    <section id="keamanan" className="soft-panel p-4 sm:p-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-brand-900">Keamanan Akun</h2>
@@ -255,7 +264,7 @@ function SecuritySettingsPanel({ role }: { role: UserRole }) {
         {passwordMessage && <p className="mt-4 rounded-2xl bg-brand-50 p-3 text-sm font-bold text-brand-700">{passwordMessage}</p>}
         {passwordError && <p className="mt-4 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{passwordError}</p>}
 
-        <Button disabled={savingPassword} className="mt-5"><FiSave /> {savingPassword ? "Menyimpan..." : "Simpan Password"}</Button>
+        <Button disabled={savingPassword} className="mt-5 w-full sm:w-auto"><FiSave /> {savingPassword ? "Menyimpan..." : "Simpan Password"}</Button>
       </form>
     </section>
   );
@@ -265,8 +274,8 @@ export function SettingsPage({ role }: { role: UserRole }) {
   return (
     <div className="space-y-6">
       <div className={`grid gap-6 ${role === "admin" ? "xl:grid-cols-2" : "xl:grid-cols-1"}`}>
-        <div className="soft-panel p-6"><FiSettings className="text-2xl text-brand-700" /><h2 className="mt-3 text-xl font-black text-brand-900">Pengaturan Akun</h2><p className="mt-2 text-sm text-stone-500">Kelola data akun {readableRole(role).toLowerCase()} dari satu halaman.</p><Button asChild className="mt-5"><Link href={`${base(role)}/profile`}>Edit Profil</Link></Button></div>
-        {role === "admin" && <div className="soft-panel p-6"><FiMail className="text-2xl text-brand-700" /><h2 className="mt-3 text-xl font-black text-brand-900">Notifikasi</h2><p className="mt-2 text-sm text-stone-500">Pantau seluruh pemberitahuan aktivitas sistem admin.</p><Button asChild variant="secondary" className="mt-5"><Link href={`${base(role)}/notifications`}>Buka Notifikasi</Link></Button></div>}
+        <div className="soft-panel p-4 sm:p-6"><FiSettings className="text-2xl text-brand-700" /><h2 className="mt-3 text-xl font-black text-brand-900">Pengaturan Akun</h2><p className="mt-2 text-sm text-stone-500">Kelola data akun {readableRole(role).toLowerCase()} dari satu halaman.</p><Button asChild className="mt-5"><Link href={`${base(role)}/profile`}>Edit Profil</Link></Button></div>
+        {role === "admin" && <div className="soft-panel p-4 sm:p-6"><FiMail className="text-2xl text-brand-700" /><h2 className="mt-3 text-xl font-black text-brand-900">Notifikasi</h2><p className="mt-2 text-sm text-stone-500">Pantau seluruh pemberitahuan aktivitas sistem admin.</p><Button asChild variant="secondary" className="mt-5"><Link href={`${base(role)}/notifications`}>Buka Notifikasi</Link></Button></div>}
       </div>
       <SecuritySettingsPanel role={role} />
       {role === "mahasiswa" && <PreferencesForm />}
@@ -352,7 +361,7 @@ export function ComplaintPage({ role }: { role: UserRole }) {
   }
 
   const history = (
-    <section className="soft-panel p-6">
+    <section className="soft-panel p-4 sm:p-6">
       <div className="flex items-center justify-between gap-4"><div><h3 className="text-xl font-black text-brand-900">{role === "admin" ? "Daftar Pengaduan" : "Riwayat Pengaduan"}</h3><p className="mt-1 text-sm text-stone-500">Klik tombol detail untuk membaca pesan lengkap.</p></div><FiInbox className="text-2xl text-brand-700" /></div>
       {sortedComplaints.length === 0 ? <div className="mt-5"><EmptyState title="Belum ada pengaduan" description={role === "admin" ? "Laporan pengguna akan tampil di halaman ini." : "Pengaduan yang dikirim akan tercatat di sini."} /></div> : (
         <div className="mt-5 space-y-3">{sortedComplaints.map((complaint) => {
@@ -367,12 +376,12 @@ export function ComplaintPage({ role }: { role: UserRole }) {
     <>
       {role === "admin" ? history : (
         <div className="grid gap-6 xl:grid-cols-[1fr_430px]">
-          <form onSubmit={submit} className="soft-panel p-6">
+          <form onSubmit={submit} className="soft-panel p-4 sm:p-6">
             <h2 className="text-2xl font-black text-brand-900">Pusat Pengaduan {readableRole(role)}</h2>
             <p className="mt-2 leading-7 text-stone-500">Pengaduan disimpan di sistem, detailnya bisa dibuka kembali, dan salinannya dapat dikirim ke email admin jika konfigurasi email sudah diisi.</p>
             <div className="mt-6 space-y-5"><Field label="Subjek"><Input name="subject" required maxLength={150} placeholder="Contoh: Masalah jadwal pengambilan" /></Field><Field label="Pesan"><Textarea name="message" required maxLength={2000} className="min-h-40" placeholder="Tulis detail kendala Anda..." /></Field></div>
             {message && <p className={`mt-5 rounded-2xl p-4 text-sm font-bold ${message.includes("gagal") ? "bg-red-50 text-red-700" : "bg-brand-50 text-brand-700"}`}>{message}</p>}
-            <Button disabled={submitting} className="mt-6"><FiSend /> {submitting ? "Mengirim..." : "Kirim Pengaduan"}</Button>
+            <Button disabled={submitting} className="mt-6 w-full sm:w-auto"><FiSend /> {submitting ? "Mengirim..." : "Kirim Pengaduan"}</Button>
           </form>
           {history}
         </div>

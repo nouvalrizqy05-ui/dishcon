@@ -471,7 +471,7 @@ create policy "mitra reads own listings" on public.surplus_listings for select u
 );
 create policy "mitra inserts own listings" on public.surplus_listings for insert with check (
   mitra_id = auth.uid()
-  and exists(select 1 from public.profiles where id = auth.uid() and role = 'mitra')
+  and exists(select 1 from public.profiles where id = auth.uid() and role = 'mitra' and verification_status <> 'ditangguhkan')
 );
 create policy "mitra or admin updates listings" on public.surplus_listings for update using (mitra_id = auth.uid() or public.is_admin()) with check (mitra_id = auth.uid() or public.is_admin());
 

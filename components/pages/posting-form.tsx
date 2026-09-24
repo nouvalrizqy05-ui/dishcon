@@ -227,11 +227,13 @@ export function PostingFormPage() {
 
   const nutrition = assessment?.nutrition || {};
   const expiry = assessment?.expiry || {};
+  const suspended = user?.verification_status === "ditangguhkan";
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-      <form ref={formRef} onSubmit={submit} className="space-y-6">
-        <section className="soft-panel p-6">
+    <div className="grid gap-4 sm:gap-6 xl:grid-cols-[1fr_380px]">
+      <form ref={formRef} onSubmit={submit} className="space-y-4 sm:space-y-6">
+        {suspended && <div role="alert" className="rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-800">Akun mitra Anda sedang ditangguhkan. Posting baru dinonaktifkan sampai admin mengaktifkan kembali akun.</div>}
+        <section className="soft-panel p-4 sm:p-6">
           <div className="mb-6 flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-brand-700 font-black text-white">1</span><h2 className="text-xl font-black text-brand-900">Informasi Kantong Surplus</h2></div>
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Nama Makanan"><Input name="nama_makanan" required placeholder="Contoh: Nasi Kucing Ayam Suwir" /></Field>
@@ -249,14 +251,14 @@ export function PostingFormPage() {
           <div className="mt-5 rounded-3xl border border-brand-100 bg-brand-50 p-4">
             <p className="font-extrabold text-brand-900">Titik Lokasi GPS Warung</p>
             <p className="mt-1 text-xs text-brand-800">Dipakai untuk perhitungan jarak hiperlokal (rumus haversine) ke mahasiswa terdekat.</p>
-            <Button type="button" variant="secondary" className="mt-3" onClick={captureLocation} disabled={locating}><FiCrosshair /> {locating ? "Mengambil lokasi..." : coords ? "Perbarui Lokasi Saat Ini" : "Ambil Lokasi Saat Ini"}</Button>
+            <Button type="button" variant="secondary" className="mt-3 w-full sm:w-auto" onClick={captureLocation} disabled={locating}><FiCrosshair /> {locating ? "Mengambil lokasi..." : coords ? "Perbarui Lokasi Saat Ini" : "Ambil Lokasi Saat Ini"}</Button>
             {coords && <p className="mt-2 text-xs font-bold text-brand-700">Lokasi tersimpan: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</p>}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            <button type="button" onClick={() => setHalal(!halal)} aria-pressed={halal} className={`rounded-full border px-4 py-2 text-sm font-black transition ${halal ? "border-brand-600 bg-brand-50 text-brand-700" : "border-stone-200 text-stone-500"}`}>Halal: {halal ? "Ya" : "Tidak"}</button>
-            <button type="button" onClick={() => runAssessment("nutrition")} disabled={assessing} aria-pressed={activeInsight === "nutrition"} className={`rounded-full border px-4 py-2 text-sm font-black transition ${activeInsight === "nutrition" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-stone-200 text-stone-500 hover:border-blue-400"}`}>{assessing ? <FiLoader className="mr-2 inline animate-spin" /> : <FiZap className="mr-2 inline" />} AI Nutrition</button>
-            <button type="button" onClick={() => runAssessment("expiry")} disabled={assessing} aria-pressed={activeInsight === "expiry"} className={`rounded-full border px-4 py-2 text-sm font-black transition ${activeInsight === "expiry" ? "border-orange-600 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500 hover:border-orange-400"}`}>{assessing ? <FiLoader className="mr-2 inline animate-spin" /> : <FiClock className="mr-2 inline" />} Expiry Risk</button>
+            <button type="button" onClick={() => setHalal(!halal)} aria-pressed={halal} className={`rounded-full border min-h-11 px-4 py-2 text-sm font-black transition ${halal ? "border-brand-600 bg-brand-50 text-brand-700" : "border-stone-200 text-stone-500"}`}>Halal: {halal ? "Ya" : "Tidak"}</button>
+            <button type="button" onClick={() => runAssessment("nutrition")} disabled={assessing} aria-pressed={activeInsight === "nutrition"} className={`rounded-full border min-h-11 px-4 py-2 text-sm font-black transition ${activeInsight === "nutrition" ? "border-blue-600 bg-blue-50 text-blue-700" : "border-stone-200 text-stone-500 hover:border-blue-400"}`}>{assessing ? <FiLoader className="mr-2 inline animate-spin" /> : <FiZap className="mr-2 inline" />} AI Nutrition</button>
+            <button type="button" onClick={() => runAssessment("expiry")} disabled={assessing} aria-pressed={activeInsight === "expiry"} className={`rounded-full border min-h-11 px-4 py-2 text-sm font-black transition ${activeInsight === "expiry" ? "border-orange-600 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500 hover:border-orange-400"}`}>{assessing ? <FiLoader className="mr-2 inline animate-spin" /> : <FiClock className="mr-2 inline" />} Expiry Risk</button>
           </div>
 
           {assessment && (
@@ -287,7 +289,7 @@ export function PostingFormPage() {
           )}
         </section>
 
-        <section className="soft-panel p-6">
+        <section className="soft-panel p-4 sm:p-6">
           <div className="mb-6 flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-brand-700 font-black text-white">2</span><h2 className="text-xl font-black text-brand-900">Foto & Verifikasi</h2></div>
           <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => chooseFile(event.target.files?.[0])} />
           <button
@@ -299,13 +301,13 @@ export function PostingFormPage() {
           >
             {preview ? (
               <div className="relative">
-                <div className="relative h-72 w-full">
+                <div className="relative h-56 w-full sm:h-72">
                   <Image src={preview} alt="Pratinjau makanan" fill className="object-cover" unoptimized />
                 </div>
                 <div className="absolute inset-x-0 bottom-0 bg-black/60 p-3 text-sm font-bold text-white"><FiImage className="mr-2 inline" /> Klik untuk mengganti foto</div>
               </div>
             ) : (
-              <div className="p-10">
+              <div className="p-6 sm:p-10">
                 <FiUploadCloud className="mx-auto text-5xl text-brand-700" />
                 <p className="mt-3 font-black text-ink">Klik atau tarik foto makanan ke sini</p>
                 <p className="mt-1 text-sm text-stone-500">PNG, JPG, atau WEBP maksimal 10MB.</p>
@@ -315,11 +317,11 @@ export function PostingFormPage() {
           {file && <p className="mt-3 text-sm font-bold text-brand-700"><FiCamera className="mr-2 inline" /> {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>}
         </section>
 
-        <Button disabled={loading || assessing} className="h-[52px] w-full shadow-lg shadow-brand-700/20"><FiSend /> {loading ? "Mengunggah dan Menyimpan..." : "Posting Kantong Surplus"}</Button>
+        <Button disabled={loading || assessing || suspended} className="h-[52px] w-full shadow-lg shadow-brand-700/20"><FiSend /> {suspended ? "Posting dinonaktifkan" : loading ? "Mengunggah dan Menyimpan..." : "Posting Kantong Surplus"}</Button>
       </form>
 
-      <aside className="space-y-5">
-        <div className="soft-panel p-6">
+      <aside className="grid gap-4 sm:gap-5">
+        <div className="soft-panel p-4 sm:p-6">
           <h3 className="text-xl font-black text-brand-900">AI Food Assessment</h3>
           <p className="mt-2 text-sm text-stone-500">Analisis dapat dijalankan sebelum listing diposting. Hasilnya tersimpan dan tampil ke mahasiswa.</p>
           <div className="mt-5 space-y-3">
@@ -327,7 +329,7 @@ export function PostingFormPage() {
             <div className="rounded-2xl bg-orange-50 p-4"><FiClock className="mr-2 inline text-orange-700" /><b>Expiry Risk</b><p className="text-sm text-stone-600">Menggunakan waktu produksi, batas ambil, dan cara penyimpanan.</p></div>
           </div>
         </div>
-        <div className="soft-panel p-6">
+        <div className="soft-panel p-4 sm:p-6">
           <h3 className="font-black text-brand-900">Verifikasi Mitra</h3>
           {user?.verification_status === "terverifikasi" ? (
             <p className="mt-3 text-sm leading-6 text-stone-600">Akun Anda sudah terverifikasi. Listing ini akan langsung <b className="text-brand-700">tayang otomatis</b>, tanpa approval berlapis.</p>

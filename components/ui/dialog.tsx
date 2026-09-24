@@ -14,13 +14,13 @@ function DialogContent({ className, children, ...props }: DialogPrimitive.Dialog
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-stone-200 bg-white p-6 shadow-2xl focus:outline-none",
+          "fixed left-1/2 top-1/2 z-50 max-h-[92dvh] w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-stone-200 bg-white p-4 shadow-2xl focus:outline-none sm:p-6",
           className
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-2 text-stone-500 hover:bg-stone-100">
+        <DialogPrimitive.Close className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full text-stone-500 hover:bg-stone-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500" aria-label="Tutup dialog">
           <FiX />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>

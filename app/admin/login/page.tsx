@@ -3,7 +3,7 @@ import { AdminLoginCard } from "@/components/auth/auth-card";
 
 export default function AdminLoginPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-brand-900 via-[#0b2b24] to-[#07101f] px-5 py-8">
+    <main className="min-h-[100dvh] bg-gradient-to-br from-brand-900 via-[#0b2b24] to-[#07101f] px-4 py-6 sm:px-5 sm:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col">
         <BrandLogo dark className="text-white" />
         <div className="grid flex-1 items-center gap-12 py-10 lg:grid-cols-[1fr_520px]">

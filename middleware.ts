@@ -9,6 +9,7 @@ const roleRules = [
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (pathname === "/admin/login") return NextResponse.next();
+  if (pathname === "/mitra/login" || pathname === "/mitra/register") return NextResponse.next();
   const rule = roleRules.find((item) => pathname === item.prefix || pathname.startsWith(`${item.prefix}/`));
   if (!rule) return NextResponse.next();
 

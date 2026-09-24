@@ -5,8 +5,8 @@ import { FoodSharingIllustration } from "@/components/landing/food-sharing-illus
 
 export default function ResetPasswordPage() {
   return (
-    <main className="min-h-screen bg-white">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1200px] gap-10 px-5 py-8 lg:grid-cols-[1fr_.9fr] lg:px-12">
+    <main className="min-h-[100dvh] bg-white">
+      <div className="mx-auto grid min-h-[100dvh] w-full max-w-[1200px] gap-8 px-4 py-6 sm:px-5 sm:py-8 lg:grid-cols-[1fr_.9fr] lg:gap-10 lg:px-12">
         <section className="flex flex-col">
           <BrandLogo />
           <div className="mt-14 max-w-2xl">

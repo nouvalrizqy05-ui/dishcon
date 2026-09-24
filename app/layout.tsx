@@ -1,6 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f7f6f0",
+};
 
 export const metadata: Metadata = {
   title: "DishCon — Kantong Surplus Area Kampus",

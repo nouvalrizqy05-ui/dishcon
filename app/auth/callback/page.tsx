@@ -163,7 +163,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-cream px-5 text-center">
+    <main className="grid min-h-[100dvh] place-items-center bg-cream px-4 text-center sm:px-5">
       <div className="soft-panel max-w-lg p-8">
         <div className="mx-auto h-14 w-14 animate-pulse rounded-full bg-brand-100" />
         <h1 className="mt-5 text-2xl font-black text-brand-900">Autentikasi DishCon</h1>

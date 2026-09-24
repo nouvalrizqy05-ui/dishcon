@@ -205,35 +205,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async ({ email, password, role = "mahasiswa" }: LoginPayload): Promise<AuthResult> => {
-    if (!email.trim() || !password) return { ok: false, error: "Email dan kata sandi wajib diisi." };
+    if (!email.trim() || !password) return { ok: false, error: "Email/nomor HP dan kata sandi wajib diisi." };
     if (!PUBLIC_ROLES.includes(role)) return { ok: false, error: "Pilih login sebagai mitra UMKM atau mahasiswa." };
 
+    const identifier = email.trim();
+    const loginEmail = identifier.includes("@")
+      ? identifier
+      : readLocalAccounts().find((item) => (item.phone || "").replace(/\D/g, "") === identifier.replace(/\D/g, ""))?.email;
+
+    if (!loginEmail) {
+      return { ok: false, error: identifier.includes("@")
+        ? "Akun belum ditemukan atau kata sandi salah."
+        : "Nomor HP tidak ditemukan. Masuk dengan email, atau daftar dulu." };
+    }
+
     if (supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error || !data.user) return { ok: false, error: error?.message || "Login gagal. Periksa email dan kata sandi." };
-      if (!isEmailVerified(data.user)) {
-        await supabase.auth.signOut();
-        return { ok: false, error: "Email belum diverifikasi. Buka email konfirmasi dari DishCon terlebih dahulu sebelum login." };
+      const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+      if (data?.user && isEmailVerified(data.user)) {
+        let profile = await fetchProfile(data.user.id);
+        if (!profile) {
+          await supabase.auth.signOut();
+          return { ok: false, error: "Profil akun belum tersedia. Hubungi administrator." };
+        }
+        if (profile.role === "admin") {
+          await supabase.auth.signOut();
+          return { ok: false, error: "Akun admin harus masuk melalui halaman Login Admin." };
+        }
+        profile = await setPublicActiveRole(data.user.id, role) || profile;
+        const activeProfile = withActiveRole(profile, role);
+        setUser(activeProfile);
+        setAuthCookie(activeProfile);
+        return { ok: true, redirectTo: roleHome(activeProfile.role) };
       }
-      let profile = await fetchProfile(data.user.id);
-      if (!profile) {
+      if (data?.user && !isEmailVerified(data.user)) {
         await supabase.auth.signOut();
-        return { ok: false, error: "Profil akun belum tersedia. Hubungi administrator." };
       }
-      if (profile.role === "admin") {
-        await supabase.auth.signOut();
-        return { ok: false, error: "Akun admin harus masuk melalui halaman Login Admin." };
+      if (error && !readLocalAccounts().some((item) => item.email.toLowerCase() === loginEmail.toLowerCase())) {
+        return { ok: false, error: error.message || "Login gagal. Periksa email dan kata sandi." };
       }
-      profile = await setPublicActiveRole(data.user.id, role) || profile;
-      const activeProfile = withActiveRole(profile, role);
-      setUser(activeProfile);
-      setAuthCookie(activeProfile);
-      return { ok: true, redirectTo: roleHome(activeProfile.role) };
     }
 
     ensureDemoAdmin();
     const accounts = readLocalAccounts();
-    const account = accounts.find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
+    const account = accounts.find((item) => item.email.toLowerCase() === loginEmail.toLowerCase());
     if (!account || account.password !== password) return { ok: false, error: "Akun belum ditemukan atau kata sandi salah." };
     if (account.role === "admin") return { ok: false, error: "Akun admin harus masuk melalui halaman Login Admin." };
     const roles = [...new Set([...normalizeRoles(account).filter((item): item is PublicUserRole => PUBLIC_ROLES.includes(item as PublicUserRole)), role])];
@@ -317,32 +331,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: payloadData
         }
       });
-      if (error || !data.user) return { ok: false, error: error?.message || "Registrasi gagal." };
-
-      const profile: Profile = {
-        id: data.user.id,
-        email: email.trim(),
-        name: name.trim(),
-        phone: phone.trim(),
-        role,
-        roles: [role],
-        address,
-        lat: lat ?? null,
-        lng: lng ?? null,
-        created_at: new Date().toISOString(),
-        ...roleFields
-      };
-      await supabase.from("profiles").upsert(profile);
-
-      if (!isEmailVerified(data.user)) {
-        await supabase.auth.signOut();
-        setAuthCookie(null);
-        return { ok: true, redirectTo: `/login?registered=1&email=${encodeURIComponent(email.trim())}` };
+      if (error && /already|registered|exists/i.test(error.message)) {
+        return { ok: false, error: error.message };
       }
-      const activeProfile = withActiveRole(profile, role);
-      setUser(activeProfile);
-      setAuthCookie(activeProfile);
-      return { ok: true, redirectTo: roleHome(activeProfile.role) };
+      if (data?.user) {
+        const profile: Profile = {
+          id: data.user.id,
+          email: email.trim(),
+          name: name.trim(),
+          phone: phone.trim(),
+          role,
+          roles: [role],
+          address,
+          lat: lat ?? null,
+          lng: lng ?? null,
+          created_at: new Date().toISOString(),
+          ...roleFields
+        };
+        await supabase.from("profiles").upsert(profile);
+        if (isEmailVerified(data.user)) {
+          const activeProfile = withActiveRole(profile, role);
+          setUser(activeProfile);
+          setAuthCookie(activeProfile);
+          return { ok: true, redirectTo: roleHome(activeProfile.role) };
+        }
+        await supabase.auth.signOut();
+      }
     }
 
     ensureDemoAdmin();

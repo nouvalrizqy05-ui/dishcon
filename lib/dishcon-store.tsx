@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { LOCAL_DB_EVENT, LOCAL_DB_KEY, readLocalDatabase, readLocalProfiles, writeLocalDatabase } from "@/lib/local-db";
+import { isListingExpired } from "@/lib/listings";
 import type {
   Complaint,
   KosShare,
@@ -62,7 +63,8 @@ function withAvailability(listings: SurplusListing[], reservations: Reservation[
     const terpakai = reservations
       .filter((reservation) => reservation.listing_id === listing.id && reservation.status !== "dibatalkan" && reservation.status !== "kedaluwarsa")
       .reduce((sum, reservation) => sum + reservation.jumlah, 0);
-    return { ...listing, jumlah_tersedia: Math.max(0, listing.jumlah_kantong - terpakai) };
+    const status = listing.status === "active" && isListingExpired(listing) ? "kedaluwarsa" : listing.status;
+    return { ...listing, status, jumlah_tersedia: Math.max(0, listing.jumlah_kantong - terpakai) };
   });
 }
 
@@ -79,7 +81,7 @@ function makeNotification(userId: string, payload: Omit<Notification, "id" | "us
   };
 }
 
-export function useDishconData() {
+function useDishconDataState() {
   const { user } = useAuth();
   const [data, setData] = useState<RoleScopedData>(emptyData());
   const [loading, setLoading] = useState(true);
@@ -242,6 +244,7 @@ export function useDishconData() {
   /** Mitra memposting "kantong surplus" baru. Verifikasi hanya sekali di awal. */
   const createListing = useCallback(async (payload: Omit<SurplusListing, "id" | "mitra_id" | "status" | "created_at" | "jumlah_tersedia">) => {
     if (!user || user.role !== "mitra") return undefined;
+    if (user.verification_status === "ditangguhkan") throw new Error("Akun mitra sedang ditangguhkan dan belum dapat membuat listing.");
     const sudahTerverifikasi = user.verification_status === "terverifikasi";
     const listing: SurplusListing = {
       ...payload,
@@ -612,7 +615,8 @@ export function useDishconData() {
     if (!listing) return;
 
     if (supabase) {
-      await supabase.from("surplus_listings").update({ status }).eq("id", id);
+      const { error } = await supabase.from("surplus_listings").update({ status }).eq("id", id);
+      if (error) throw new Error(error.message);
       await addNotification({
         user_id: listing.mitra_id,
         title: "Status listing diperbarui oleh admin",
@@ -675,6 +679,19 @@ export function useDishconData() {
     updateListingStatus,
     mitraUpdateListingStatus
   }), [cancelReservation, completeReservation, createComplaint, createKosShare, createListing, data, loading, markNotificationRead, refresh, reserveListing, updateComplaintStatus, updateKosShareStatus, updateListingStatus, updatePreferences, verifyMitra, mitraUpdateListingStatus]);
+}
+
+const DishconDataContext = createContext<ReturnType<typeof useDishconDataState> | null>(null);
+
+export function DishconDataProvider({ children }: { children: React.ReactNode }) {
+  const value = useDishconDataState();
+  return <DishconDataContext.Provider value={value}>{children}</DishconDataContext.Provider>;
+}
+
+export function useDishconData() {
+  const value = useContext(DishconDataContext);
+  if (!value) throw new Error("useDishconData must be used inside DishconDataProvider");
+  return value;
 }
 
 export function readableRole(role: UserRole) {

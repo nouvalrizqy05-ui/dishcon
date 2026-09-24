@@ -103,15 +103,15 @@ export function AdminDashboardPage() {
   const komisiTerkumpul = reservations.filter((r) => r.status === "completed").reduce((sum, r) => sum + r.komisi_platform, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
         <MetricCard icon={FiPackage} label="Total Kantong Surplus" value={listings.length} hint={`${pendingListings.length} menunggu verifikasi mitra`} />
         <MetricCard icon={FiUsers} label="Total Reservasi" value={reservations.length} hint={`${menunggu} menunggu diambil`} tone="blue" />
         <MetricCard icon={FiZap} label="Cakupan AI" value={`${coverage}%`} hint={`${assessed} listing sudah dianalisis`} tone="purple" />
         <MetricCard icon={FiActivity} label="Komisi Terkumpul" value={formatRupiah(komisiTerkumpul)} hint="Dari reservasi selesai" tone="orange" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-4 sm:gap-6 xl:grid-cols-[1fr_340px]">
         <section className="space-y-6">
           <div className="grid gap-5 md:grid-cols-3">
             <Link href="/admin/listings" className="soft-panel p-5 transition hover:-translate-y-1"><FiPackage className="text-2xl text-brand-700" /><h3 className="mt-4 font-black text-ink">Kantong Surplus</h3><p className="mt-2 text-3xl font-black text-brand-700">{pendingListings.length}</p><p className="text-sm text-stone-500">menunggu verifikasi</p></Link>
@@ -136,18 +136,50 @@ export function AdminDashboardPage() {
 
 export function AdminListingsPage() {
   const { listings, profiles, loading, updateListingStatus } = useDishconData();
-  const [q, setQ] = useState("");
+  const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState<SurplusListing | null>(null);
   const filtered = useMemo(() => listings.filter((item) => {
     const mitra = profileLabel(profiles, item.mitra_id);
-    return `${item.nama_makanan} ${item.lokasi} ${mitra}`.toLowerCase().includes(q.toLowerCase()) && (status === "all" || item.status === status);
-  }), [listings, profiles, q, status]);
+    return `${item.nama_makanan} ${item.lokasi} ${mitra}`.toLowerCase().includes(query.toLowerCase()) && (status === "all" || item.status === status);
+  }), [listings, profiles, query, status]);
 
   return <>
-    <section className="soft-panel p-5">
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-2xl font-black text-brand-900">Manajemen Kantong Surplus</h2><p className="text-stone-500">Memeriksa foto, data form, AI Nutrition, dan Expiry Risk.</p></div><div className="flex gap-2"><div className="relative"><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><Input value={q} onChange={(event) => setQ(event.target.value)} className="pl-10" placeholder="Cari listing..." /></div><select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-2xl border border-stone-200 px-3 text-sm font-bold"><option value="all">Semua</option><option value="pending_verification">Menunggu</option><option value="active">Aktif</option><option value="habis">Habis</option><option value="ditolak">Ditolak</option></select></div></div>
-      {loading ? <p>Memuat data...</p> : filtered.length === 0 ? <EmptyState title="Belum ada kantong surplus" description="Listing yang dibuat akun mitra akan tampil otomatis pada halaman ini." /> : <div className="overflow-x-auto"><table className="mockup-table min-w-[1100px] w-full"><thead><tr><th>Foto</th><th>Makanan</th><th>Mitra</th><th>Harga</th><th>AI Assessment</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{filtered.map((item) => <tr key={item.id}><td>{item.image_url ? <div className="relative h-14 w-16 overflow-hidden rounded-xl"><Image src={item.image_url} alt="" fill className="object-cover" /></div> : <div className="grid h-14 w-16 place-items-center rounded-xl bg-stone-100">🍱</div>}</td><td><b>{item.nama_makanan}</b><p className="text-xs text-stone-500">{item.jumlah_kantong} kantong · {item.kategori}</p></td><td>{profileLabel(profiles, item.mitra_id)}</td><td>{formatRupiah(item.harga_diskon)}</td><td><p className="max-w-[260px] text-xs"><b>{String(item.nutrition?.calories_estimate || "Belum ada")}</b><br />{item.expiry?.risk_level || "Belum dianalisis"}</p></td><td><StatusBadge status={item.status} /></td><td><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setSelected(item)}><FiEye /> Detail</Button><Button size="sm" onClick={() => updateListingStatus(item.id, "active")} disabled={item.status === "active"}><FiCheck /> Aktifkan</Button><Button size="sm" variant="secondary" onClick={() => updateListingStatus(item.id, "ditarik")} disabled={item.status === "ditarik"}><FiX /> Tarik</Button></div></td></tr>)}</tbody></table></div>}
+    <section className="soft-panel min-w-0 p-4 sm:p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div><h2 className="text-xl font-black text-stone-900 sm:text-2xl">Manajemen Kantong Surplus</h2><p className="mt-1 text-sm text-stone-500">Periksa foto, data mitra, dan hasil assessment AI.</p></div>
+        <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] lg:w-[520px]">
+          <label className="relative"><span className="sr-only">Cari listing</span><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true" /><Input value={query} onChange={(event) => setQuery(event.target.value)} className="pl-10" placeholder="Cari listing..." /></label>
+          <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-12 w-full rounded-2xl border border-stone-200 bg-white px-3 text-base font-bold outline-none focus:ring-2 focus:ring-brand-500 sm:text-sm">
+            <option value="all">Semua status</option><option value="pending_verification">Menunggu</option><option value="active">Aktif</option><option value="habis">Habis</option><option value="ditolak">Ditolak</option><option value="ditarik">Ditarik</option><option value="kedaluwarsa">Kedaluwarsa</option>
+          </select>
+        </div>
+      </div>
+
+      {loading ? <p className="text-stone-500">Memuat data...</p> : filtered.length === 0 ? <EmptyState title="Belum ada Kantong Surplus" description="Listing dari akun mitra akan tampil otomatis di halaman ini." /> : (
+        <>
+          <div className="space-y-3 xl:hidden">
+            {filtered.map((item) => (
+              <article key={item.id} className="overflow-hidden rounded-2xl border border-stone-200 bg-white sm:rounded-3xl">
+                <div className="flex gap-3 p-3.5 sm:p-4">
+                  {item.image_url ? <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-stone-100"><Image src={item.image_url} alt={item.nama_makanan} fill className="object-cover" sizes="80px" /></div> : <div className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-stone-100 text-2xl">🍱</div>}
+                  <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><h3 className="truncate font-black text-stone-900">{item.nama_makanan}</h3><StatusBadge status={item.status} /></div><p className="mt-1 text-xs text-stone-500">{item.jumlah_kantong} kantong · {item.kategori}</p><p className="mt-1 truncate text-xs text-stone-500">{profileLabel(profiles, item.mitra_id)}</p><div className="mt-2 flex items-center justify-between gap-2"><b className="text-brand-700">{formatRupiah(item.harga_diskon)}</b><span className="text-[10px] text-stone-400">AI: {item.expiry?.risk_level || "belum dianalisis"}</span></div></div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 border-t border-stone-100 bg-stone-50 p-3">
+                  <Button size="sm" variant="secondary" className="col-span-2" onClick={() => setSelected(item)}><FiEye aria-hidden="true" /> Detail</Button>
+                  <Button size="sm" onClick={() => { if (confirm("Aktifkan kembali listing ini?")) updateListingStatus(item.id, "active"); }} disabled={item.status === "active"}><FiCheck aria-hidden="true" /> Aktifkan</Button>
+                  <Button size="sm" variant="secondary" onClick={() => { if (confirm("Tolak listing ini?")) updateListingStatus(item.id, "ditolak"); }} disabled={item.status === "ditolak"}><FiX aria-hidden="true" /> Tolak</Button>
+                  <Button size="sm" variant="secondary" className="col-span-2 text-red-600" onClick={() => { if (confirm("Tarik listing ini dari katalog?")) updateListingStatus(item.id, "ditarik"); }} disabled={item.status === "ditarik"}><FiX aria-hidden="true" /> Tarik dari Katalog</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="mockup-table min-w-[1100px] w-full"><thead><tr><th>Foto</th><th>Makanan</th><th>Mitra</th><th>Harga</th><th>AI Assessment</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{filtered.map((item) => <tr key={item.id}><td>{item.image_url ? <div className="relative h-14 w-16 overflow-hidden rounded-xl"><Image src={item.image_url} alt="" fill className="object-cover" /></div> : <div className="grid h-14 w-16 place-items-center rounded-xl bg-stone-100">🍱</div>}</td><td><b>{item.nama_makanan}</b><p className="text-xs text-stone-500">{item.jumlah_kantong} kantong · {item.kategori}</p></td><td>{profileLabel(profiles, item.mitra_id)}</td><td>{formatRupiah(item.harga_diskon)}</td><td><p className="max-w-[260px] text-xs"><b>{String(item.nutrition?.calories_estimate || "Belum ada")}</b><br />{item.expiry?.risk_level || "Belum dianalisis"}</p></td><td><StatusBadge status={item.status} /></td><td><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setSelected(item)}><FiEye /> Detail</Button><Button size="sm" onClick={() => { if (confirm("Aktifkan kembali listing ini?")) updateListingStatus(item.id, "active"); }} disabled={item.status === "active"}><FiCheck /> Aktifkan</Button><Button size="sm" variant="secondary" onClick={() => { if (confirm("Tolak listing ini?")) updateListingStatus(item.id, "ditolak"); }} disabled={item.status === "ditolak"}><FiX /> Tolak</Button><Button size="sm" variant="secondary" onClick={() => { if (confirm("Tarik listing ini dari katalog?")) updateListingStatus(item.id, "ditarik"); }} disabled={item.status === "ditarik"}><FiX /> Tarik</Button></div></td></tr>)}</tbody></table>
+          </div>
+        </>
+      )}
     </section>
     <ListingDetailDialog listing={selected} profiles={profiles} onClose={() => setSelected(null)} />
   </>;
@@ -159,16 +191,30 @@ export function AdminMitraPage() {
   const mitras = useMemo(() => profiles.filter((item) => item.role === "mitra" && `${item.name} ${item.nama_usaha || ""} ${item.email}`.toLowerCase().includes(q.toLowerCase())), [profiles, q]);
 
   return (
-    <section className="soft-panel p-6">
+    <section className="soft-panel p-4 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div><h2 className="text-2xl font-black text-brand-900">Verifikasi Mitra</h2><p className="mt-1 text-stone-500">Verifikasi hanya dilakukan sekali per mitra — listing berikutnya otomatis tayang tanpa approval berlapis.</p></div>
+        <div><h2 className="text-xl font-black text-stone-900 sm:text-2xl">Verifikasi Mitra</h2><p className="mt-1 text-stone-500">Verifikasi hanya dilakukan sekali per mitra — listing berikutnya otomatis tayang tanpa approval berlapis.</p></div>
         <div className="relative"><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><Input value={q} onChange={(event) => setQ(event.target.value)} className="pl-10" placeholder="Cari mitra..." /></div>
       </div>
       {loading ? <p>Memuat mitra...</p> : mitras.length === 0 ? <EmptyState title="Belum ada mitra" description="Akun mitra akan tampil di sini setelah registrasi." /> : (
-        <div className="overflow-x-auto"><table className="mockup-table min-w-[900px] w-full"><thead><tr><th>Mitra</th><th>Jenis Usaha</th><th>Kontak</th><th>Listing</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{mitras.map((mitra) => {
-          const jumlahListing = listings.filter((item) => item.mitra_id === mitra.id).length;
-          return <tr key={mitra.id}><td><b>{mitra.nama_usaha || mitra.name}</b><p className="text-xs text-stone-500">{mitra.name}</p></td><td>{readableStatus(mitra.jenis_usaha || "lainnya")}</td><td>{mitra.email}<p className="text-xs text-stone-500">{mitra.phone}</p></td><td>{jumlahListing}</td><td><StatusBadge status={mitra.verification_status || "belum_verifikasi"} /></td><td><div className="flex gap-2"><Button size="sm" onClick={() => verifyMitra(mitra.id, "terverifikasi")} disabled={mitra.verification_status === "terverifikasi"}><FiCheck /> Verifikasi</Button><Button size="sm" variant="secondary" onClick={() => verifyMitra(mitra.id, "ditangguhkan")} disabled={mitra.verification_status === "ditangguhkan"}><FiX /> Tangguhkan</Button></div></td></tr>;
-        })}</tbody></table></div>
+        <>
+          <div className="space-y-3 xl:hidden">
+            {mitras.map((mitra) => {
+              const jumlahListing = listings.filter((item) => item.mitra_id === mitra.id).length;
+              return (
+                <article key={mitra.id} className="rounded-2xl border border-stone-200 p-3.5 sm:p-4">
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-black text-stone-900">{mitra.nama_usaha || mitra.name}</h3><p className="mt-1 text-xs text-stone-500">{mitra.name} · {readableStatus(mitra.jenis_usaha || "lainnya")}</p></div><StatusBadge status={mitra.verification_status || "belum_verifikasi"} /></div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs"><div><span className="text-stone-400">Kontak</span><b className="mt-0.5 block truncate text-stone-700">{mitra.email}</b><span className="mt-0.5 block text-stone-400">{mitra.phone || "-"}</span></div><div><span className="text-stone-400">Listing</span><b className="mt-0.5 block text-stone-700">{jumlahListing}</b></div></div>
+                  <div className="mt-3 grid grid-cols-2 gap-2"><Button size="sm" onClick={() => verifyMitra(mitra.id, "terverifikasi")} disabled={mitra.verification_status === "terverifikasi"}><FiCheck aria-hidden="true" /> Verifikasi</Button><Button size="sm" variant="secondary" onClick={() => { if (confirm("Tangguhkan akun mitra ini?")) void verifyMitra(mitra.id, "ditangguhkan"); }} disabled={mitra.verification_status === "ditangguhkan"}><FiX aria-hidden="true" /> Tangguhkan</Button></div>
+                </article>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto xl:block"><table className="mockup-table min-w-[900px] w-full"><thead><tr><th>Mitra</th><th>Jenis Usaha</th><th>Kontak</th><th>Listing</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{mitras.map((mitra) => {
+            const jumlahListing = listings.filter((item) => item.mitra_id === mitra.id).length;
+            return <tr key={mitra.id}><td><b>{mitra.nama_usaha || mitra.name}</b><p className="text-xs text-stone-500">{mitra.name}</p></td><td>{readableStatus(mitra.jenis_usaha || "lainnya")}</td><td>{mitra.email}<p className="text-xs text-stone-500">{mitra.phone}</p></td><td>{jumlahListing}</td><td><StatusBadge status={mitra.verification_status || "belum_verifikasi"} /></td><td><div className="flex gap-2"><Button size="sm" onClick={() => verifyMitra(mitra.id, "terverifikasi")} disabled={mitra.verification_status === "terverifikasi"}><FiCheck /> Verifikasi</Button><Button size="sm" variant="secondary" onClick={() => { if (confirm("Tangguhkan akun mitra ini?")) void verifyMitra(mitra.id, "ditangguhkan"); }} disabled={mitra.verification_status === "ditangguhkan"}><FiX /> Tangguhkan</Button></div></td></tr>;
+          })}</tbody></table></div>
+        </>
       )}
     </section>
   );
@@ -187,9 +233,25 @@ export function AdminReservationsPage() {
   const selectedListing = selected ? listings.find((l) => l.id === selected.listing_id) : undefined;
 
   return <>
-    <section className="soft-panel p-5">
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-2xl font-black text-brand-900">Reservasi</h2><p className="text-stone-500">Reservasi tercatat instan — admin hanya memantau, tidak menyetujui manual.</p></div><div className="flex gap-2"><div className="relative"><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><Input value={q} onChange={(event) => setQ(event.target.value)} className="pl-10" placeholder="Cari reservasi..." /></div><select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-2xl border border-stone-200 px-3 text-sm font-bold"><option value="all">Semua</option><option value="reserved">Menunggu</option><option value="completed">Selesai</option><option value="dibatalkan">Dibatalkan</option></select></div></div>
-      {loading ? <p>Memuat data...</p> : filtered.length === 0 ? <EmptyState title="Belum ada reservasi" description="Reservasi mahasiswa akan tampil otomatis setelah dibuat dari katalog." /> : <div className="overflow-x-auto"><table className="mockup-table min-w-[1050px] w-full"><thead><tr><th>ID</th><th>Mahasiswa</th><th>Makanan</th><th>Mitra</th><th>Jumlah</th><th>Total</th><th>Komisi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{filtered.map((item) => { const listing = listings.find((l) => l.id === item.listing_id); return <tr key={item.id}><td>{item.id.slice(0, 8)}</td><td>{profileLabel(profiles, item.mahasiswa_id)}</td><td><b>{listing?.nama_makanan || "-"}</b></td><td>{profileLabel(profiles, item.mitra_id)}</td><td>{item.jumlah}</td><td>{formatRupiah(item.total_harga)}</td><td>{formatRupiah(item.komisi_platform)}</td><td><StatusBadge status={item.status} /></td><td><Button size="sm" variant="secondary" onClick={() => setSelected(item)}><FiEye /> Detail</Button></td></tr>; })}</tbody></table></div>}
+    <section className="soft-panel p-4 sm:p-5">
+      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="text-xl font-black text-stone-900 sm:text-2xl">Reservasi</h2><p className="text-stone-500">Reservasi tercatat instan — admin hanya memantau, tidak menyetujui manual.</p></div><div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_170px] lg:flex"><div className="relative"><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><Input value={q} onChange={(event) => setQ(event.target.value)} className="pl-10" placeholder="Cari reservasi..." /></div><select value={status} onChange={(event) => setStatus(event.target.value)} className="h-12 w-full rounded-2xl border border-stone-200 bg-white px-3 text-base font-bold sm:text-sm"><option value="all">Semua</option><option value="reserved">Menunggu</option><option value="completed">Selesai</option><option value="dibatalkan">Dibatalkan</option><option value="kedaluwarsa">Kedaluwarsa</option></select></div></div>
+      {loading ? <p className="text-stone-500">Memuat data...</p> : filtered.length === 0 ? <EmptyState title="Belum ada reservasi" description="Reservasi mahasiswa akan tampil otomatis setelah dibuat dari katalog." /> : (
+        <>
+          <div className="space-y-3 xl:hidden">
+            {filtered.map((item) => {
+              const listing = listings.find((candidate) => candidate.id === item.listing_id);
+              return (
+                <article key={item.id} className="rounded-2xl border border-stone-200 p-3.5 sm:p-4">
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-black text-stone-900">{listing?.nama_makanan || "Kantong surplus"}</h3><p className="mt-1 text-xs text-stone-500">{profileLabel(profiles, item.mahasiswa_id)} · {item.id.slice(0, 8)}</p><p className="mt-1 text-[11px] text-stone-400">Mitra: {profileLabel(profiles, item.mitra_id)}</p></div><StatusBadge status={item.status} /></div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><span className="text-stone-400">Jumlah</span><b className="mt-0.5 block text-stone-700">{item.jumlah} kantong</b></div><div><span className="text-stone-400">Total</span><b className="mt-0.5 block text-brand-700">{formatRupiah(item.total_harga)}</b></div><div><span className="text-stone-400">Komisi</span><b className="mt-0.5 block text-stone-700">{formatRupiah(item.komisi_platform)}</b></div></div>
+                  <Button size="sm" variant="secondary" className="mt-3 w-full" onClick={() => setSelected(item)}><FiEye aria-hidden="true" /> Lihat Detail</Button>
+                </article>
+              );
+            })}
+          </div>
+          <div className="hidden overflow-x-auto xl:block"><table className="mockup-table min-w-[1050px] w-full"><thead><tr><th>ID</th><th>Mahasiswa</th><th>Makanan</th><th>Mitra</th><th>Jumlah</th><th>Total</th><th>Komisi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>{filtered.map((item) => { const listing = listings.find((l) => l.id === item.listing_id); return <tr key={item.id}><td>{item.id.slice(0, 8)}</td><td>{profileLabel(profiles, item.mahasiswa_id)}</td><td><b>{listing?.nama_makanan || "-"}</b></td><td>{profileLabel(profiles, item.mitra_id)}</td><td>{item.jumlah}</td><td>{formatRupiah(item.total_harga)}</td><td>{formatRupiah(item.komisi_platform)}</td><td><StatusBadge status={item.status} /></td><td><Button size="sm" variant="secondary" onClick={() => setSelected(item)}><FiEye /> Detail</Button></td></tr>; })}</tbody></table></div>
+        </>
+      )}
     </section>
     <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}>
       <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
@@ -214,16 +276,59 @@ export function AdminReservationsPage() {
 
 export function AdminUsersPage() {
   const { profiles, loading } = useDishconData();
-  const [q, setQ] = useState("");
-  const filtered = profiles.filter((item) => `${item.name} ${item.email} ${item.role} ${item.nama_usaha || ""} ${item.nama_kos || ""}`.toLowerCase().includes(q.toLowerCase()));
-  return <section className="soft-panel p-6"><div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><h2 className="text-2xl font-black text-brand-900">Manajemen Pengguna</h2><p className="mt-1 text-stone-500">Profil mitra, mahasiswa, dan admin terpusat untuk keperluan verifikasi.</p></div><div className="relative"><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><Input value={q} onChange={(event) => setQ(event.target.value)} className="pl-10" placeholder="Cari pengguna..." /></div></div>{loading ? <p>Memuat pengguna...</p> : filtered.length === 0 ? <EmptyState title="Belum ada pengguna" description="Daftar pengguna akan muncul setelah akun dibuat." /> : <div className="overflow-x-auto"><table className="mockup-table min-w-[850px] w-full"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Detail</th><th>Alamat</th></tr></thead><tbody>{filtered.map((item) => <tr key={item.id}><td><b>{item.name}</b><p className="text-xs text-stone-500">{item.phone || "-"}</p></td><td>{item.email}</td><td><StatusBadge status={item.role} /></td><td>{item.nama_usaha || item.nama_kos || "-"}</td><td>{item.address || "-"}</td></tr>)}</tbody></table></div>}</section>;
-}
+  const [query, setQuery] = useState("");
+  const filtered = profiles.filter((item) => `${item.name} ${item.email} ${item.role} ${item.nama_usaha || ""} ${item.nama_kos || ""}`.toLowerCase().includes(query.toLowerCase()));
 
+  return (
+    <section className="soft-panel min-w-0 p-4 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-xl font-black text-stone-900 sm:text-2xl">Manajemen Pengguna</h2>
+          <p className="mt-1 text-sm text-stone-500">Profil mitra, mahasiswa, dan admin dalam satu tempat.</p>
+        </div>
+        <label className="relative w-full md:w-72">
+          <span className="sr-only">Cari pengguna</span>
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true" />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} className="pl-10" placeholder="Cari pengguna..." />
+        </label>
+      </div>
+      {loading ? (
+        <p className="text-stone-500">Memuat pengguna...</p>
+      ) : filtered.length === 0 ? (
+        <EmptyState title="Belum ada pengguna" description="Pengguna akan muncul setelah akun dibuat." />
+      ) : (
+        <>
+          <div className="space-y-3 xl:hidden">
+            {filtered.map((item) => (
+              <article key={item.id} className="rounded-2xl border border-stone-200 p-3.5 sm:p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0"><h3 className="truncate font-black text-stone-900">{item.name}</h3><p className="mt-1 truncate text-xs text-stone-500">{item.email}</p></div>
+                  <StatusBadge status={item.role} />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  <div><span className="text-stone-400">Telepon</span><b className="mt-0.5 block text-stone-700">{item.phone || "-"}</b></div>
+                  <div><span className="text-stone-400">Detail</span><b className="mt-0.5 block truncate text-stone-700">{item.nama_usaha || item.nama_kos || "-"}</b></div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-stone-500">{item.address || "Alamat belum dilengkapi"}</p>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto xl:block">
+            <table className="mockup-table min-w-[850px] w-full">
+              <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Detail</th><th>Alamat</th></tr></thead>
+              <tbody>{filtered.map((item) => <tr key={item.id}><td><b>{item.name}</b><p className="text-xs text-stone-500">{item.phone || "-"}</p></td><td>{item.email}</td><td><StatusBadge status={item.role} /></td><td>{item.nama_usaha || item.nama_kos || "-"}</td><td>{item.address || "-"}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
 export function AdminAiPage() {
   const { listings } = useDishconData();
   const assessed = listings.filter((item) => item.nutrition);
   const providers = Array.from(new Set(assessed.map((item) => String(item.nutrition?.provider || "unknown"))));
-  return <div className="grid gap-6 lg:grid-cols-[1fr_340px]"><section className="soft-panel p-6"><h2 className="text-2xl font-black text-brand-900">Implementasi Artificial Intelligence</h2><p className="mt-2 text-stone-500">AI sudah terhubung ke form posting kantong surplus dan hasil analisis tersimpan bersama data makanan.</p><div className="mt-6 grid gap-4 md:grid-cols-2"><div className="rounded-3xl border border-blue-100 bg-blue-50 p-5"><b className="text-blue-900">AI Nutrition Estimator</b><p className="mt-2 text-sm text-blue-800">Menghasilkan estimasi kalori, makronutrisi, serat, serta potensi alergen.</p></div><div className="rounded-3xl border border-orange-100 bg-orange-50 p-5"><b className="text-orange-900">AI Expiry Risk Detection</b><p className="mt-2 text-sm text-orange-800">Mempertimbangkan jenis hidangan, waktu produksi, batas ambil, dan penyimpanan.</p></div></div><h3 className="mt-7 text-lg font-black text-brand-900">Hasil Assessment Terbaru</h3>{assessed.length === 0 ? <EmptyState title="Belum ada assessment" description="Jalankan AI dari formulir posting untuk menampilkan hasil di halaman ini." /> : <div className="mt-4 space-y-3">{assessed.slice(0, 8).map((item) => <div key={item.id} className="grid gap-3 rounded-3xl border border-stone-200 p-4 md:grid-cols-[1fr_180px_1fr]"><div><b>{item.nama_makanan}</b><p className="text-xs text-stone-500">{String(item.nutrition?.provider || "AI")}</p></div><p className="text-sm font-bold text-blue-700">{String(item.nutrition?.calories_estimate || "-")}</p><p className="text-sm text-orange-700">{item.expiry?.risk_level || "-"}</p></div>)}</div>}</section><aside className="space-y-5"><div className="soft-panel p-6"><FiActivity className="text-2xl text-brand-700" /><h3 className="mt-3 font-black text-brand-900">Status Implementasi</h3><p className="mt-3 text-4xl font-black text-brand-700">{assessed.length}</p><p className="text-sm text-stone-500">listing sudah memiliki hasil AI</p></div><div className="soft-panel p-6"><h3 className="font-black text-brand-900">Provider Aktif</h3><div className="mt-3 flex flex-wrap gap-2">{providers.length ? providers.map((provider) => <span key={provider} className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold">{provider}</span>) : <span className="text-sm text-stone-500">OpenRouter atau local rules akan tercatat setelah assessment.</span>}</div></div></aside></div>;
+  return <div className="grid gap-6 lg:grid-cols-[1fr_340px]"><section className="soft-panel p-4 sm:p-6"><h2 className="text-2xl font-black text-brand-900">Implementasi Artificial Intelligence</h2><p className="mt-2 text-stone-500">AI sudah terhubung ke form posting kantong surplus dan hasil analisis tersimpan bersama data makanan.</p><div className="mt-6 grid gap-4 md:grid-cols-2"><div className="rounded-3xl border border-blue-100 bg-blue-50 p-5"><b className="text-blue-900">AI Nutrition Estimator</b><p className="mt-2 text-sm text-blue-800">Menghasilkan estimasi kalori, makronutrisi, serat, serta potensi alergen.</p></div><div className="rounded-3xl border border-orange-100 bg-orange-50 p-5"><b className="text-orange-900">AI Expiry Risk Detection</b><p className="mt-2 text-sm text-orange-800">Mempertimbangkan jenis hidangan, waktu produksi, batas ambil, dan penyimpanan.</p></div></div><h3 className="mt-7 text-lg font-black text-brand-900">Hasil Assessment Terbaru</h3>{assessed.length === 0 ? <EmptyState title="Belum ada assessment" description="Jalankan AI dari formulir posting untuk menampilkan hasil di halaman ini." /> : <div className="mt-4 space-y-3">{assessed.slice(0, 8).map((item) => <div key={item.id} className="grid gap-3 rounded-3xl border border-stone-200 p-4 md:grid-cols-[1fr_180px_1fr]"><div><b>{item.nama_makanan}</b><p className="text-xs text-stone-500">{String(item.nutrition?.provider || "AI")}</p></div><p className="text-sm font-bold text-blue-700">{String(item.nutrition?.calories_estimate || "-")}</p><p className="text-sm text-orange-700">{item.expiry?.risk_level || "-"}</p></div>)}</div>}</section><aside className="space-y-5"><div className="soft-panel p-4 sm:p-6"><FiActivity className="text-2xl text-brand-700" /><h3 className="mt-3 font-black text-brand-900">Status Implementasi</h3><p className="mt-3 text-4xl font-black text-brand-700">{assessed.length}</p><p className="text-sm text-stone-500">listing sudah memiliki hasil AI</p></div><div className="soft-panel p-4 sm:p-6"><h3 className="font-black text-brand-900">Provider Aktif</h3><div className="mt-3 flex flex-wrap gap-2">{providers.length ? providers.map((provider) => <span key={provider} className="rounded-full bg-stone-100 px-3 py-2 text-xs font-bold">{provider}</span>) : <span className="text-sm text-stone-500">OpenRouter atau local rules akan tercatat setelah assessment.</span>}</div></div></aside></div>;
 }
 
 export function AdminZonesPage() {

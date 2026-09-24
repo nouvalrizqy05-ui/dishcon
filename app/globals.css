@@ -2,21 +2,117 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Fredoka";
+  src: url("/fonts/fredoka-300.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fredoka";
+  src: url("/fonts/fredoka-400.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fredoka";
+  src: url("/fonts/fredoka-500.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fredoka";
+  src: url("/fonts/fredoka-600.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fredoka";
+  src: url("/fonts/fredoka-700.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: url("/fonts/nunito-400.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: url("/fonts/nunito-500.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: url("/fonts/nunito-600.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: url("/fonts/nunito-700.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: url("/fonts/nunito-800.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: url("/fonts/nunito-900.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: 247 246 240;
   --foreground: 16 24 40;
   --brand: 20 127 69;
+  --font-fredoka: "Fredoka", "Segoe UI", "Trebuchet MS", "Arial", sans-serif;
+  --font-nunito: "Nunito", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-x: clip;
   background: rgb(var(--background));
   color: rgb(var(--foreground));
+  font-family: var(--font-fredoka);
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -28,6 +124,9 @@ body {
 }
 
 @layer components {
+  /* Responsive contract: <768px uses the native mobile canvas; >=768px uses the web shell. */
+  .mobile-only { @apply md:hidden; }
+  .web-only { @apply hidden md:block; }
   .container-page {
     @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6 lg:px-8;
   }
@@ -41,12 +140,55 @@ body {
     @apply bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500;
   }
   .soft-panel {
-    @apply rounded-[1.7rem] border border-stone-200 bg-white shadow-card;
+    @apply rounded-3xl border border-stone-200 bg-white shadow-card sm:rounded-[1.7rem];
   }
   .mockup-table th {
     @apply bg-stone-100 px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500;
   }
   .mockup-table td {
     @apply border-b border-stone-200 px-4 py-3 align-middle text-sm;
+  }
+
+  /* Nunito (font-soft) applied to all descriptive/subtitle text */
+  p, li, label, input, textarea, select, .font-soft {
+    font-family: var(--font-nunito), "Nunito", ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes infinite-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.333%); }
+}
+@keyframes infinite-scroll-reverse {
+  from { transform: translateX(-33.333%); }
+  to { transform: translateX(0); }
+}
+.animate-infinite-scroll {
+  animation: infinite-scroll 36s linear infinite;
+}
+.animate-infinite-scroll-reverse {
+  animation: infinite-scroll-reverse 42s linear infinite;
+}
+.animate-infinite-scroll:hover,
+.animate-infinite-scroll-reverse:hover {
+  animation-play-state: paused;
+}
+
+@layer utilities {
+  .mobile-safe-bottom {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  .glass-mobile-nav {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.46));
+    -webkit-backdrop-filter: blur(32px) saturate(170%);
+    backdrop-filter: blur(32px) saturate(170%);
   }
 }

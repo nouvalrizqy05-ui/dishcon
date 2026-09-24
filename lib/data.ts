@@ -1,10 +1,10 @@
 import { FiActivity, FiClock, FiGift, FiHeart, FiUsers, FiZap } from "react-icons/fi";
 
 export const navLinks = [
-  { href: "/", label: "Beranda" },
-  { href: "/#fitur", label: "Fitur" },
-  { href: "/#cara-kerja", label: "Cara Kerja" },
-  { href: "/#tentang", label: "Tentang" }
+  { href: "#tersedia", label: "Live Surplus" },
+  { href: "#cara-kerja", label: "Cara Kerja" },
+  { href: "#kampus", label: "Testimoni" },
+  { href: "#inspirasi", label: "Inspirasi" }
 ];
 
 export const featureCards = [
