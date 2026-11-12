@@ -85,7 +85,7 @@ function getNav(role: UserRole, unread: number, pendingMitra: number): NavSectio
         label: "MENU MITRA",
         items: [
           { href: "/mitra/dashboard", label: "Dashboard", icon: FiHome },
-          { href: "/mitra/posting", label: "Posting Kantong Surplus", icon: FiPlusCircle, highlight: true },
+          { href: "/mitra/posting", label: "Posting Kantong Surplus", icon: FiPlusCircle },
           { href: "/mitra/history", label: "Riwayat & Reservasi", icon: FiClock },
           { href: "/mitra/profile", label: "Profil Usaha", icon: FiUser },
           { href: "/mitra/notifications", label: "Notifikasi", icon: FiBell, badge: unread },
