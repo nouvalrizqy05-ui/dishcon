@@ -102,7 +102,7 @@ function getNav(role: UserRole, unread: number, pendingMitra: number): NavSectio
       items: [
         { href: "/mahasiswa/dashboard", label: "Dashboard", icon: FiHome },
         { href: "/mahasiswa/catalog", label: "Cari Kantong Surplus", icon: FiSearch },
-        { href: "/mahasiswa/kos-share", label: "Berbagi Antar Kos", icon: FiUsers, highlight: true },
+        { href: "/mahasiswa/kos-share", label: "Berbagi Antar Kos", icon: FiUsers },
         { href: "/mahasiswa/history", label: "Reservasi Saya", icon: FiClock },
         { href: "/mahasiswa/profile", label: "Profil", icon: FiUser },
         { href: "/mahasiswa/notifications", label: "Notifikasi", icon: FiBell, badge: unread },
